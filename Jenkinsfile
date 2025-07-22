@@ -23,9 +23,9 @@ pipeline {
                     // Accept Bitbucket host key (safe in CI/CD if Bitbucket's key is known)
                     sh '''
                         mkdir -p ~/.ssh
-                        echo -e "Host bitbucket.org\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
-                        chmod 600 ~/.ssh/config
+                        echo -e "Host bitbucket.org\\n\\tStrictHostKeyChecking no\\n" >> ~/.ssh/config
                         ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+                        chmod 600 ~/.ssh/config
                     '''
 
                     echo "Cloning Upmonth analytics repo..."
