@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        CI_REPO = 'https://github.com/milicaoui/ci-integration.git'
+        CI_REPO = 'https://github.com/milicaoui/jenkins-project.git'
         TEST_REPO = 'https://github.com/milicaoui/pytestproject.git'
         ANALYTICS_REPO = 'git@bitbucket.org:upmonthteam/upmonth-analytics.git'
         DSL_REPO = 'git@bitbucket.org:upmonthteam/upmonth-query-dsl.git'
@@ -20,15 +20,16 @@ pipeline {
         stage('Clone Projects') {
             steps {
                 script {
+                    // Accept Bitbucket host key (safe in CI/CD if Bitbucket's key is known)
+                    sh 'mkdir -p ~/.ssh && ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts'
+
                     echo "Cloning Upmonth analytics repo..."
                     dir('upmonth-analytics') {
                         git credentialsId: 'bitbucket-ssh-key-new', url: "${ANALYTICS_REPO}"
                     }
 
-                    
                     echo "Cloning CI Integration repo..."
                     sh "git clone $CI_REPO ci-integration"
-                    
 
                     echo "Cloning Pytest repo..."
                     sh "git clone $TEST_REPO pytestproject"
@@ -38,12 +39,10 @@ pipeline {
                         git branch: 'main', credentialsId: 'bitbucket-ssh-key-new', url: "${DSL_REPO}"
                     }
 
-                    
                     echo "Cloning Text Extraction repo..."
                     dir('text-extraction') {
                         git credentialsId: 'bitbucket-ssh-key-new', url: "${TEXT_EXTRACTION_REPO}"
                     }
-
                 }
             }
         }
