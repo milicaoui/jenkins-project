@@ -17,16 +17,20 @@ pipeline {
             }
         }
 
+        stage('Disable SSH Host Checking') {
+            steps {
+                bat '''
+                    mkdir "%USERPROFILE%\\.ssh" 2>nul
+                    echo Host bitbucket.org >> "%USERPROFILE%\\.ssh\\config"
+                    echo   StrictHostKeyChecking no >> "%USERPROFILE%\\.ssh\\config"
+                    echo   UserKnownHostsFile=/dev/null >> "%USERPROFILE%\\.ssh\\config"
+                    ssh-keyscan bitbucket.org >> "%USERPROFILE%\\.ssh\\known_hosts"
+                '''
+            }
+        }
         stage('Clone Projects') {
             steps {
                 script {
-                    // Accept Bitbucket host key (safe in CI/CD if Bitbucket's key is known)
-                    sh '''
-                        mkdir -p ~/.ssh
-                        echo -e "Host bitbucket.org\\n\\tStrictHostKeyChecking no\\n" >> ~/.ssh/config
-                        ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
-                        chmod 600 ~/.ssh/config
-                    '''
 
                     echo "Cloning Upmonth analytics repo..."
                     dir('upmonth-analytics') {
