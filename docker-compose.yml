@@ -1,0 +1,126 @@
+networks:
+  upmonth-dev-tests:
+    driver: bridge
+
+services:
+
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    volumes: 
+      - mongodb_data:/data/db
+    ports: 
+      - 27017:27017
+    restart: always
+    networks:
+      - upmonth-dev-tests
+
+  # upmanalytics:
+  #   build:
+  #     context: ../upmonth-analytics
+  #     dockerfile: ./dockerFiles/Dockerfile-dev
+  #     args:
+  #       ARG_VERSION: 0.1.169
+  #   container_name: upmanalytics
+  #   ports:
+  #     - 9966:9966
+  #   depends_on:
+  #     - mongodb
+  #   restart: always
+  #   networks:
+  #     - upmonth-dev-tests
+
+  upmonth-database:
+    image: mysql:5.7
+    container_name: testupmonthdb
+    ports:
+      - "3308:3306"
+    environment: 
+      - MYSQL_ROOT_PASSWORD=upmonth
+      - MYSQL_USER=upmonth
+      - MYSQL_PASSWORD=upmonth
+      - MYSQL_DATABASE=testupmonthdb
+    volumes:
+      - upmonth-database-data:/var/lib/mysql
+      - ./mysql-custom.cnf:/etc/mysql/conf.d/custom.cnf
+    networks:
+      upmonth-dev-tests:
+        aliases:
+          - upmonthdb
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pupmonth"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    command: --default-authentication-plugin=mysql_native_password
+
+  text-extraction:
+    container_name: text-extraction
+    build:
+      context: ../text-extraction
+      dockerfile: ./Dockerfile
+    ports:
+      - "8090:80"
+    env_file:
+      - ../upmonth-text-extraction/.env
+    depends_on:
+      - upmonth-database
+    networks:
+      - upmonth-dev-tests
+
+  query-web:
+    container_name: query-web
+    build:
+      context: ../upmonth-query-dsl
+      dockerfile: ./Dockerfile
+    ports:
+      - "5000:80"
+    volumes:
+      - ../query-service:/app
+    env_file:
+      - ../upmonth-query-dsl/.env
+    depends_on:
+      - upmonth-database
+      - memcached-dsl
+    networks:
+      - upmonth-dev-tests
+  
+  memcached-dsl:
+    container_name: memcached-dsl
+    image: launcher.gcr.io/google/memcached1
+    ports:
+      - "11212:11211"
+    networks:
+      - upmonth-dev-tests
+    
+
+  db-init:
+    image: mysql:5.7
+    depends_on:
+      upmonth-database:
+        condition: service_healthy
+    networks:
+      - upmonth-dev-tests
+    environment:
+      MYSQL_ROOT_PASSWORD: upmonth
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
+    entrypoint:
+      - sh
+      - -c
+      - |
+        for file in /docker-entrypoint-initdb.d/*.sql; do
+          echo "Running $file"
+          mysql -h upmonthdb -uroot -p"$MYSQL_ROOT_PASSWORD" < "$file"
+        done
+
+  pytest-tests:
+    build:
+      context: ../pytestproject
+    container_name: pytest-tests
+    networks:
+      - upmonth-dev-tests
+
+volumes:
+  upmonth-database-data:
+  mongodb_data:
