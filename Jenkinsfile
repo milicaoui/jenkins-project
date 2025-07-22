@@ -19,12 +19,12 @@ pipeline {
 
         stage('Disable SSH Host Checking') {
             steps {
-                bat '''
-                    mkdir "%USERPROFILE%\\.ssh" 2>nul
-                    echo Host bitbucket.org >> "%USERPROFILE%\\.ssh\\config"
-                    echo   StrictHostKeyChecking no >> "%USERPROFILE%\\.ssh\\config"
-                    echo   UserKnownHostsFile=/dev/null >> "%USERPROFILE%\\.ssh\\config"
-                    ssh-keyscan bitbucket.org >> "%USERPROFILE%\\.ssh\\known_hosts"
+                sh '''
+                    mkdir -p ~/.ssh
+                    echo "Host bitbucket.org" >> ~/.ssh/config
+                    echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+                    ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+                    chmod 600 ~/.ssh/config
                 '''
             }
         }
