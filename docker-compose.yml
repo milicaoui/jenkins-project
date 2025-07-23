@@ -118,7 +118,10 @@ services:
   pytest-tests:
     build:
       context: ./upmonth-tests
+      dockerfile: ./upmonth-tests/Dockerfile 
     container_name: pytest-tests
+    env_file:
+    - upm-tests/.env
     networks:
       - upmonth-dev-tests
   
