@@ -54,6 +54,10 @@ pipeline {
         stage('Pull Service Images') {
             steps {
                 sh '''
+                    echo "Cleaning up any existing containers..."
+                    docker compose down --remove-orphans || true
+                    docker rm -f mongodb memcached-dsl pytest-tests testupmonthdb || true
+
                     echo "Pulling latest images from ECR..."
                     docker compose pull
                     docker compose up -d
