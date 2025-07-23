@@ -87,9 +87,9 @@ services:
     networks:
       - upmonth-dev-tests
   
-  memcached-webapp:
+  memcached:
     image: launcher.gcr.io/google/memcached1
-    container_name: memcached-webapp
+    container_name: memcached
     ports:
       - "11213:11211"
     networks:
