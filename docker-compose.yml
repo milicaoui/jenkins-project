@@ -117,7 +117,7 @@ services:
 
   pytest-tests:
     build:
-      context: ./pytestproject
+      context: ./upmonth-tests
     container_name: pytest-tests
     networks:
       - upmonth-dev-tests

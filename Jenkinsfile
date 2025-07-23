@@ -2,12 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'us-east-1'
-        ECR_REGISTRY = '175663446849.dkr.ecr.us-east-1.amazonaws.com'
-        TEXT_EXTRACTION_IMAGE = "$ECR_REGISTRY/text-extraction:latest"
-        QUERY_DSL_IMAGE = "$ECR_REGISTRY/upmonth-query-dsl:latest"
-        ANALYTICS_IMAGE = "$ECR_REGISTRY/upmonth-analytics:latest"
-        MYSQL_ROOT_PASSWORD = 'upmonth'
+        UPMONTH_TESTS_REPO = 'git@bitbucket.org:upmonthteam/upmonth-tests.git'
     }
 
     stages {
@@ -32,10 +27,12 @@ pipeline {
 
         stage('Clone Projects') {
             steps {
-                sh '''
+                script {
                     echo "Cloning Pytest repo..."
-                    git clone https://github.com/milicaoui/pytestproject.git
-                '''
+                    git branch: 'new-environment-setup',
+                        credentialsId: 'bitbucket-ssh-key-new',
+                        url: "${UPMONTH_TESTS_REPO}"
+                }
             }
         }
 
