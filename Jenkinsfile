@@ -55,7 +55,7 @@ pipeline {
                 sh '''
                     echo "Cleaning up any existing containers..."
                     docker compose down --remove-orphans || true
-                    docker rm -f mongodb memcached-dsl pytest-tests testupmonthdb || true
+                    docker rm -f mongodb memcached-dsl pytest-service testupmonthdb || true
 
                     echo "Pulling latest images from ECR..."
                     docker compose pull
@@ -67,7 +67,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    docker compose run --rm pytest-tests
+                    docker compose run --rm pytest-service
                 '''
             }
         }
@@ -77,7 +77,7 @@ pipeline {
                 sh '''
                     echo "Cleaning up old Docker containers..."
                     docker compose down --remove-orphans || true
-                    docker rm -f pytest-tests || true
+                    docker rm -f pytest-service || true
                     docker rm -f testupmonthdb || true
                 '''
             }
@@ -99,7 +99,7 @@ pipeline {
             steps {
                 sh '''
                     echo "Running integration tests with Docker Compose..."
-                    docker compose up --abort-on-container-exit --exit-code-from pytest-tests pytest-tests
+                    docker compose up --abort-on-container-exit --exit-code-from pytest-service pytest-service
                 '''
             }
         }

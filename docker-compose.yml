@@ -115,11 +115,11 @@ services:
           mysql -h upmonthdb -uroot -p"$MYSQL_ROOT_PASSWORD" < "$file"
         done
 
-  pytest-tests:
+  pytest-service:
     build:
       context: ././upm-tests
       dockerfile: ././upm-tests/Dockerfile 
-    container_name: pytest-tests
+    container_name: pytest-service
     env_file:
     - upmonth-tests/.env
     networks:
