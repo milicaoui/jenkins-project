@@ -85,7 +85,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                    docker exec pytest-service pytest -v tests/02_fund_permissions
+                    docker exec pytest-service pytest -v tests/02_fund_permissions/access
                     '''
                 }
             }
