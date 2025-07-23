@@ -140,7 +140,7 @@ services:
     env_file:
       - ./upmonth-webapp/.env
     ports:
-      - "8080:80"
+      - "8089:80"
     depends_on:
       - upmonth-database
     networks:
