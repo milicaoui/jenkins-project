@@ -7,6 +7,7 @@ networks:
 volumes:
   upmonth-database-data:
   mongodb_data:
+  elastic_data:
 
 services:
 
@@ -44,6 +45,14 @@ services:
       timeout: 5s
       retries: 30
     command: --default-authentication-plugin=mysql_native_password
+    
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - upmonth-dev-tests
 
   text-extraction:
     image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-text-extraction:0.0.30
@@ -77,6 +86,14 @@ services:
       - "11212:11211"
     networks:
       - upmonth-dev-tests
+  
+  memcached-webapp:
+    image: launcher.gcr.io/google/memcached1
+    container_name: memcached-webapp
+    ports:
+      - "11213:11211"
+    networks:
+      - upmonth-dev-tests
 
   db-init:
     image: mysql:5.7
@@ -104,3 +121,60 @@ services:
     container_name: pytest-tests
     networks:
       - upmonth-dev-tests
+  
+  search-service:
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-search:0.0.169
+    container_name: search-service
+    env_file:
+      - ./upmonth-search/.env
+    ports:
+      - "8091:80"
+    depends_on:
+      - upmonth-database
+    networks:
+      - upmonth-dev-tests
+  
+  webapp:
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-webapp:0.53.11
+    container_name: webapp
+    env_file:
+      - ./upmonth-webapp/.env
+    ports:
+      - "8080:80"
+    depends_on:
+      - upmonth-database
+    networks:
+      - upmonth-dev-tests
+  
+  
+  upmonth-analytics:
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-analytics:0.1.169
+    container_name: analytics
+    depends_on:
+      - mongodb
+    ports:
+      - "9966:9966"
+    networks:
+      - upmonth-dev-tests
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.2.4
+    container_name: elasticsearch
+    ports:
+      - 9200:9200
+      - 9300:9300
+    environment:
+      - discovery.type=single-node
+      - cluster.name=upmsearchcode
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    networks:
+      upmonth-dev-tests:
+        aliases:
+          - elasticsearch
