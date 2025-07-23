@@ -51,7 +51,7 @@ services:
     ports:
       - "8090:80"
     env_file:
-      - ../upmonth-text-extraction/.env
+      - ./upmonth-text-extraction/.env
     depends_on:
       - upmonth-database
     networks:
@@ -63,7 +63,7 @@ services:
     ports:
       - "5000:80"
     env_file:
-      - ../upmonth-query-dsl/.env
+      - ./upmonth-query-dsl/.env
     depends_on:
       - upmonth-database
       - memcached-dsl
