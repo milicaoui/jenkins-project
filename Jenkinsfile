@@ -32,12 +32,13 @@ pipeline {
 
         stage('Clone Projects') {
             steps {
-
+                sh '''
                     echo "Cloning Pytest repo..."
-                    sh "git clone https://github.com/milicaoui/pytestproject.git"
-                }
+                    git clone https://github.com/milicaoui/pytestproject.git
+                '''
             }
         }
+
 
         stage('Login to Amazon ECR') {
             steps {
