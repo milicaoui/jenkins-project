@@ -78,8 +78,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    docker-compose up -d
-                    docker-compose exec pytest-service pytest -v tests/02_fund_permissions
+                    docker compose up -d
+                    docker compose exec pytest-service pytest -v tests/02_fund_permissions
                 '''
             }
         }
