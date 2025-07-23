@@ -117,8 +117,8 @@ services:
 
   pytest-service:
     build:
-      context: ././upm-tests
-      dockerfile: ././upm-tests/Dockerfile 
+      context: ./upm-tests
+      dockerfile: Dockerfile
     container_name: pytest-service
     env_file:
     - upmonth-tests/.env
