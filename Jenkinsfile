@@ -78,9 +78,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                    docker compose up -d
-                    docker compose run --rm pytest-service pytest -v tests/02_fund_permissions
-                    docker compose down
+                    docker compose run --rm --network upmonth-dev-tests pytest-service pytest -v tests/02_fund_permissions
                 '''
             }
         }
