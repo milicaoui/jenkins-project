@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'us-east-1' // change if needed
+        AWS_REGION = 'us-east-1'
         ECR_REGISTRY = '175663446849.dkr.ecr.${AWS_REGION}.amazonaws.com'
         TEXT_EXTRACTION_IMAGE = "${ECR_REGISTRY}/text-extraction:latest"
         QUERY_DSL_IMAGE = "${ECR_REGISTRY}/upmonth-query-dsl:latest"
@@ -22,34 +22,29 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
                     sh '''
                         echo "Logging into ECR..."
-                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                     '''
                 }
             }
         }
 
-
         stage('Pull Service Images') {
             steps {
-                dir('ci-integration') {
-                    sh '''
-                        echo "Pulling latest images from ECR..."
-                        docker compose pull
-                    '''
-                }
+                sh '''
+                    echo "Pulling latest images from ECR..."
+                    docker compose pull
+                '''
             }
         }
 
         stage('Cleanup Old Containers') {
             steps {
-                dir('ci-integration') {
-                    sh '''
-                        echo "Cleaning up old Docker containers..."
-                        docker compose down --remove-orphans || true
-                        docker rm -f pytest-tests || true
-                        docker rm -f testupmonthdb || true
-                    '''
-                }
+                sh '''
+                    echo "Cleaning up old Docker containers..."
+                    docker compose down --remove-orphans || true
+                    docker rm -f pytest-tests || true
+                    docker rm -f testupmonthdb || true
+                '''
             }
         }
 
@@ -57,9 +52,9 @@ pipeline {
             steps {
                 script {
                     sh """
-                        echo "--- CI Integration Directory ---"
-                        ls -la ci-integration/
-                        [ -f "ci-integration/docker-compose.yml" ] || (echo "❌ Missing docker-compose.yml" && exit 1)
+                        echo "--- Workspace Directory ---"
+                        ls -la
+                        [ -f "docker-compose.yml" ] || (echo "❌ Missing docker-compose.yml" && exit 1)
                     """
                 }
             }
@@ -67,24 +62,20 @@ pipeline {
 
         stage('Run Integration Tests') {
             steps {
-                dir('ci-integration') {
-                    sh '''
-                        echo "Running integration tests with Docker Compose..."
-                        docker compose up --abort-on-container-exit --exit-code-from pytest-tests pytest-tests
-                    '''
-                }
+                sh '''
+                    echo "Running integration tests with Docker Compose..."
+                    docker compose up --abort-on-container-exit --exit-code-from pytest-tests pytest-tests
+                '''
             }
         }
     }
 
     post {
         always {
-            dir('ci-integration') {
-                sh '''
-                    echo "Cleaning up Docker environment..."
-                    docker compose down --remove-orphans || true
-                '''
-            }
+            sh '''
+                echo "Cleaning up Docker environment..."
+                docker compose down --remove-orphans || true
+            '''
         }
         success {
             echo "🎉 All integration tests passed!"
