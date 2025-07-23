@@ -30,6 +30,15 @@ pipeline {
             }
         }
 
+        stage('Clone Projects') {
+            steps {
+
+                    echo "Cloning Pytest repo..."
+                    sh "git clone https://github.com/milicaoui/pytestproject.git"
+                }
+            }
+        }
+
         stage('Login to Amazon ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
@@ -46,6 +55,15 @@ pipeline {
                 sh '''
                     echo "Pulling latest images from ECR..."
                     docker compose pull
+                    docker compose up -d
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    docker compose run --rm pytest-tests
                 '''
             }
         }
