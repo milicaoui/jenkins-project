@@ -13,13 +13,20 @@ pipeline {
     stages {
         stage('Clean Workspace') {
             steps {
-                cleanWs()
+                cleanWs()  // clean first, before checkout
             }
         }
-
-        stage('Print working directory') {
+        
+        stage('Checkout Source') {
             steps {
-                sh 'pwd'
+                checkout scm
+            }
+        }
+        
+        stage('Verify docker-compose.yml') {
+            steps {
+                sh 'ls -la'
+                sh 'test -f docker-compose.yml || (echo "docker-compose.yml missing!" && exit 1)'
             }
         }
 
@@ -31,13 +38,6 @@ pipeline {
                         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 175663446849.dkr.ecr.us-east-1.amazonaws.com
                     '''
                 }
-            }
-        }
-
-        stage('Verify docker-compose.yml') {
-            steps {
-                sh 'ls -la'
-                sh 'test -f docker-compose.yml || (echo "docker-compose.yml missing!" && exit 1)'
             }
         }
 
