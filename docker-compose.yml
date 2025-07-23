@@ -100,7 +100,7 @@ services:
 
   pytest-tests:
     build:
-      context: ../pytestproject
+      context: ./pytestproject
     container_name: pytest-tests
     networks:
       - upmonth-dev-tests
