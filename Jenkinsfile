@@ -33,10 +33,21 @@ pipeline {
                         git branch: 'new-environment-setup',
                             url: 'git@bitbucket.org:upmonthteam/upmonth-tests.git',
                             credentialsId: 'bitbucket-ssh-key-new'
+
+                        // ⬇️ Add this to confirm contents
+                        sh '''
+                            echo "--- Listing contents of upm-tests ---"
+                            ls -la
+                            echo "--- Showing requirements.txt ---"
+                            cat requirements.txt || echo "❌ requirements.txt is missing"
+                            echo "--- Showing Dockerfile ---"
+                            cat Dockerfile || echo "❌ Dockerfile is missing"
+                        '''
                     }
                 }
             }
         }
+
 
 
         stage('Login to Amazon ECR') {
