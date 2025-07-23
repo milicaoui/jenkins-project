@@ -75,11 +75,17 @@ pipeline {
             }
         }
 
+        stage('Start Containers') {
+            steps {
+                sh 'docker compose up -d'
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                    docker compose run --rm pytest-service pytest -v tests/02_fund_permissions
+                    docker exec pytest-service pytest -v tests/02_fund_permissions
                     '''
                 }
             }
