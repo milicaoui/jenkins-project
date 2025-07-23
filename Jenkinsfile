@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         AWS_REGION = 'us-east-1'
-        ECR_REGISTRY = '175663446849.dkr.ecr.${AWS_REGION}.amazonaws.com'
-        TEXT_EXTRACTION_IMAGE = "${ECR_REGISTRY}/text-extraction:latest"
-        QUERY_DSL_IMAGE = "${ECR_REGISTRY}/upmonth-query-dsl:latest"
-        ANALYTICS_IMAGE = "${ECR_REGISTRY}/upmonth-analytics:latest"
+        ECR_REGISTRY = '175663446849.dkr.ecr.$AWS_REGION.amazonaws.com'
+        TEXT_EXTRACTION_IMAGE = "$ECR_REGISTRY/text-extraction:latest"
+        QUERY_DSL_IMAGE = "$ECR_REGISTRY/upmonth-query-dsl:latest"
+        ANALYTICS_IMAGE = "$ECR_REGISTRY/upmonth-analytics:latest"
         MYSQL_ROOT_PASSWORD = 'upmonth'
     }
 
@@ -22,7 +22,7 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
                     sh '''
                         echo "Logging into ECR..."
-                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
                     '''
                 }
             }
