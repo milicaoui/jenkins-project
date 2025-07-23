@@ -117,11 +117,11 @@ services:
 
   pytest-tests:
     build:
-      context: ./upmonth-tests
-      dockerfile: ./upmonth-tests/Dockerfile 
+      context: ././upm-tests
+      dockerfile: ././upm-tests/Dockerfile 
     container_name: pytest-tests
     env_file:
-    - upm-tests/.env
+    - upmonth-tests/.env
     networks:
       - upmonth-dev-tests
   

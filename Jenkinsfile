@@ -29,9 +29,11 @@ pipeline {
             steps {
                 script {
                     echo "Cloning Pytest repo..."
-                    git branch: 'new-environment-setup',
-                        credentialsId: 'bitbucket-ssh-key-new',
-                        url: "${UPMONTH_TESTS_REPO}"
+                    dir('upm-tests') {
+                        git branch: 'new-environment-setup',
+                            url: 'git@bitbucket.org:upmonthteam/upmonth-tests.git',
+                            credentialsId: 'bitbucket-ssh-key-new'
+                    }
                 }
             }
         }
