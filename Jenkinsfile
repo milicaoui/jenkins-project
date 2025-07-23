@@ -17,6 +17,12 @@ pipeline {
             }
         }
 
+        stage('Print working directory') {
+            steps {
+                sh 'pwd'
+            }
+        }
+
         stage('Login to Amazon ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
@@ -25,6 +31,13 @@ pipeline {
                         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 175663446849.dkr.ecr.us-east-1.amazonaws.com
                     '''
                 }
+            }
+        }
+
+        stage('Verify docker-compose.yml') {
+            steps {
+                sh 'ls -la'
+                sh 'test -f docker-compose.yml || (echo "docker-compose.yml missing!" && exit 1)'
             }
         }
 
