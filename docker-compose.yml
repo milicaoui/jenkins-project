@@ -1,6 +1,12 @@
+version: '3.8'
+
 networks:
   upmonth-dev-tests:
     driver: bridge
+
+volumes:
+  upmonth-database-data:
+  mongodb_data:
 
 services:
 
@@ -14,21 +20,6 @@ services:
     restart: always
     networks:
       - upmonth-dev-tests
-
-  # upmanalytics:
-  #   build:
-  #     context: ../upmonth-analytics
-  #     dockerfile: ./dockerFiles/Dockerfile-dev
-  #     args:
-  #       ARG_VERSION: 0.1.169
-  #   container_name: upmanalytics
-  #   ports:
-  #     - 9966:9966
-  #   depends_on:
-  #     - mongodb
-  #   restart: always
-  #   networks:
-  #     - upmonth-dev-tests
 
   upmonth-database:
     image: mysql:5.7
@@ -55,10 +46,8 @@ services:
     command: --default-authentication-plugin=mysql_native_password
 
   text-extraction:
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-text-extraction:0.0.30
     container_name: text-extraction
-    build:
-      context: ../text-extraction
-      dockerfile: ./Dockerfile
     ports:
       - "8090:80"
     env_file:
@@ -69,14 +58,10 @@ services:
       - upmonth-dev-tests
 
   query-web:
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-query-dsl:0.0.23
     container_name: query-web
-    build:
-      context: ../upmonth-query-dsl
-      dockerfile: ./Dockerfile
     ports:
       - "5000:80"
-    volumes:
-      - ../query-service:/app
     env_file:
       - ../upmonth-query-dsl/.env
     depends_on:
@@ -84,15 +69,14 @@ services:
       - memcached-dsl
     networks:
       - upmonth-dev-tests
-  
+
   memcached-dsl:
-    container_name: memcached-dsl
     image: launcher.gcr.io/google/memcached1
+    container_name: memcached-dsl
     ports:
       - "11212:11211"
     networks:
       - upmonth-dev-tests
-    
 
   db-init:
     image: mysql:5.7
@@ -120,7 +104,3 @@ services:
     container_name: pytest-tests
     networks:
       - upmonth-dev-tests
-
-volumes:
-  upmonth-database-data:
-  mongodb_data:

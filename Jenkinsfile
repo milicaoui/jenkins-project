@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        CI_REPO = 'https://github.com/milicaoui/jenkins-project.git'
-        TEST_REPO = 'https://github.com/milicaoui/pytestproject.git'
-        ANALYTICS_REPO = 'git@bitbucket.org:upmonthteam/upmonth-analytics.git'
-        DSL_REPO = 'git@bitbucket.org:upmonthteam/upmonth-query-dsl.git'
-        TEXT_EXTRACTION_REPO = 'git@bitbucket.org:upmonthteam/upmonth-text-extraction.git'
+        AWS_REGION = 'us-east-1' // change if needed
+        ECR_REGISTRY = '175663446849.dkr.ecr.${AWS_REGION}.amazonaws.com'
+        TEXT_EXTRACTION_IMAGE = "${ECR_REGISTRY}/text-extraction:latest"
+        QUERY_DSL_IMAGE = "${ECR_REGISTRY}/upmonth-query-dsl:latest"
+        ANALYTICS_IMAGE = "${ECR_REGISTRY}/upmonth-analytics:latest"
         MYSQL_ROOT_PASSWORD = 'upmonth'
     }
 
@@ -17,50 +17,34 @@ pipeline {
             }
         }
 
-        stage('Disable SSH Host Checking') {
+        stage('Login to Amazon ECR') {
             steps {
-                sh '''
-                    mkdir -p ~/.ssh
-                    echo "Host bitbucket.org" >> ~/.ssh/config
-                    echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-                    ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
-                    chmod 600 ~/.ssh/config
-                '''
-            }
-        }
-        stage('Clone Projects') {
-            steps {
-                script {
-
-                    echo "Cloning Upmonth analytics repo..."
-                    dir('upmonth-analytics') {
-                        git credentialsId: 'bitbucket-ssh-key-new', url: "${ANALYTICS_REPO}"
-                    }
-
-                    echo "Cloning CI Integration repo..."
-                    sh "git clone $CI_REPO ci-integration"
-
-                    echo "Cloning Pytest repo..."
-                    sh "git clone $TEST_REPO pytestproject"
-
-                    echo "Cloning Upmonth dsl repo..."
-                    dir('upmonth-query-dsl') {
-                        git branch: 'main', credentialsId: 'bitbucket-ssh-key-new', url: "${DSL_REPO}"
-                    }
-
-                    echo "Cloning Text Extraction repo..."
-                    dir('text-extraction') {
-                        git credentialsId: 'bitbucket-ssh-key-new', url: "${TEXT_EXTRACTION_REPO}"
-                    }
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
+                    sh '''
+                        echo "Logging into ECR..."
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                    '''
                 }
             }
         }
 
-        stage('Cleanup') {
+
+        stage('Pull Service Images') {
             steps {
                 dir('ci-integration') {
                     sh '''
-                        echo "Cleaning up old docker containers and networks..."
+                        echo "Pulling latest images from ECR..."
+                        docker compose pull
+                    '''
+                }
+            }
+        }
+
+        stage('Cleanup Old Containers') {
+            steps {
+                dir('ci-integration') {
+                    sh '''
+                        echo "Cleaning up old Docker containers..."
                         docker compose down --remove-orphans || true
                         docker rm -f pytest-tests || true
                         docker rm -f testupmonthdb || true
@@ -69,67 +53,24 @@ pipeline {
             }
         }
 
-        /*
-        stage('Build Analytics Service') {
-            environment {
-                SDKMAN_DIR = "/var/jenkins_home/.sdkman"
-                PATH = "${SDKMAN_DIR}/candidates/java/current/bin:${env.PATH}"
-            }
-            steps {
-                configFileProvider([configFile(fileId: 'upmonth-maven-settings', variable: 'MAVEN_SETTINGS')]) {
-                    dir('upmonth-analytics/upmonth-analytics') {
-                        sh '''#!/bin/bash
-                            echo "Building analytics service with Maven..."
-                            source "$SDKMAN_DIR/bin/sdkman-init.sh" || { echo "❌ Failed to source SDKMAN"; exit 1; }
-                            sdk use java 8.0.392-tem || { echo "❌ Failed to switch Java version"; exit 1; }
-                            mvn clean package -s "$MAVEN_SETTINGS" -DskipTests
-
-                            echo "Listing target directory after build:"
-                            ls -la target || echo "target directory missing"
-                        '''
-                    }
-                }
-            }
-        }
-
-        */
-        stage('Verify Structure') {
+        stage('Verify Required Files') {
             steps {
                 script {
                     sh """
-                        echo "--- CI Integration ---"
+                        echo "--- CI Integration Directory ---"
                         ls -la ci-integration/
-                        [ -f "ci-integration/docker-compose.yml" ] || (echo "Missing docker-compose.yml" && exit 1)
-
-                        echo "--- Pytest Project ---"
-                        ls -la pytestproject/
-                        [ -f "pytestproject/requirements.txt" ] || (echo "Missing requirements.txt" && exit 1)
+                        [ -f "ci-integration/docker-compose.yml" ] || (echo "❌ Missing docker-compose.yml" && exit 1)
                     """
                 }
             }
         }
-        
 
         stage('Run Integration Tests') {
             steps {
                 dir('ci-integration') {
                     sh '''
-                        echo "Running integration tests with docker-compose..."
-                        echo "UPM_ANALYTICS_VERSION=${UPM_ANALYTICS_VERSION}" > .env
-                        docker compose build --no-cache
+                        echo "Running integration tests with Docker Compose..."
                         docker compose up --abort-on-container-exit --exit-code-from pytest-tests pytest-tests
-                    '''
-
-                    sh '''
-                    echo "Waiting for text-extraction service to become healthy..."
-                    for i in {1..30}; do
-                    if curl -s http://localhost:8090/actuator/health | grep '"status":"UP"' > /dev/null; then
-                        echo "✅ Service is healthy!"
-                        break
-                    fi
-                    echo "⏳ Waiting..."
-                    sleep 2
-                    done
                     '''
                 }
             }
@@ -140,18 +81,16 @@ pipeline {
         always {
             dir('ci-integration') {
                 sh '''
-                    echo "Cleaning up docker containers after tests..."
+                    echo "Cleaning up Docker environment..."
                     docker compose down --remove-orphans || true
-                    docker rm -f pytest-tests || true
-                    docker rm -f testupmonthdb || true
                 '''
             }
         }
         success {
-            echo "🎉 All tests passed successfully!"
+            echo "🎉 All integration tests passed!"
         }
         failure {
-            echo "❌ Tests failed. See logs above."
+            echo "❌ Tests failed. Check logs above for details."
         }
     }
 }
