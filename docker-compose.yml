@@ -124,6 +124,9 @@ services:
     - upmonth-tests/.env
     networks:
       - upmonth-dev-tests
+    depends_on:
+      webapp:
+        condition: service_healthy
   
   search-service:
     image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-search:0.0.169
@@ -148,7 +151,13 @@ services:
       - upmonth-database
     networks:
       - upmonth-dev-tests
-  
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    
   
   upmonth-analytics:
     image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-analytics:0.1.169
