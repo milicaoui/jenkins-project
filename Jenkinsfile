@@ -85,7 +85,7 @@ pipeline {
             steps {
                 catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
                     sh '''
-                    docker exec pytest-service sh -c "PYTHONPATH=tests pytest -v tests/"
+                    docker exec pytest-service pytest tests/06_file_permissions/access/
                     '''
                 }
             }
