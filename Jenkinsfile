@@ -8,135 +8,93 @@ pipeline {
     stages {
         stage('Clean Workspace') {
             steps {
-                cleanWs()  // clean first, before checkout
+                cleanWs()
             }
         }
-        
+
         stage('Checkout Source') {
             steps {
                 checkout scm
             }
         }
-        
+
         stage('Verify docker-compose.yml') {
             steps {
-                sh 'ls -la'
-                sh 'test -f docker-compose.yml || (echo "docker-compose.yml missing!" && exit 1)'
+                sh '''
+                    echo "📁 Verifying workspace contents..."
+                    ls -la
+                    test -f docker-compose.yml || (echo "❌ docker-compose.yml missing!" && exit 1)
+                '''
             }
         }
 
-        stage('Clone Projects') {
+        stage('Clone Test Repo') {
             steps {
-                script {
-                    echo "Cloning Pytest repo..."
-                    dir('upm-tests') {
-                        git branch: 'new-environment-setup',
-                            url: 'git@bitbucket.org:upmonthteam/upmonth-tests.git',
-                            credentialsId: 'bitbucket-ssh-key-new'
-
-                        // ⬇️ Add this to confirm contents
-                        sh '''
-                            echo "--- Listing contents of upm-tests ---"
-                            ls -la
-                            echo "--- Showing requirements.txt ---"
-                            cat requirements.txt || echo "❌ requirements.txt is missing"
-                            echo "--- Showing Dockerfile ---"
-                            cat Dockerfile || echo "❌ Dockerfile is missing"
-                        '''
-                    }
+                dir('upm-tests') {
+                    git branch: 'new-environment-setup',
+                        url: "${UPMONTH_TESTS_REPO}",
+                        credentialsId: 'bitbucket-ssh-key-new'
                 }
             }
         }
-
-
 
         stage('Login to Amazon ECR') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-ecr-creds']]) {
                     sh '''
-                        echo "Logging into ECR..."
+                        echo "🔐 Logging into ECR..."
                         aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 175663446849.dkr.ecr.us-east-1.amazonaws.com
                     '''
                 }
             }
         }
 
-        stage('Pull Service Images') {
+        stage('Start All Services') {
             steps {
                 sh '''
-                    echo "Cleaning up any existing containers..."
+                    echo "🧹 Cleaning up previous containers..."
                     docker compose down --remove-orphans || true
-                    docker rm -f mongodb memcached-dsl pytest-service testupmonthdb || true
 
-                    echo "Pulling latest images from ECR..."
+                    echo "📦 Pulling all service images..."
                     docker compose pull
+
+                    echo "🚀 Starting all services..."
                     docker compose up -d
+
+                    echo "✅ Services started:"
+                    docker ps
                 '''
             }
         }
 
-        stage('Start Containers') {
-            steps {
-                sh 'docker compose up -d'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    sh '''
-                    docker exec pytest-service pytest tests/06_file_permissions/access/test_get_file_content.py
-                    '''
-                }
-            }
-        }
-
-
-        stage('Cleanup Old Containers') {
+        stage('Container Status and Logs') {
             steps {
                 sh '''
-                    echo "Cleaning up old Docker containers..."
-                    docker compose down --remove-orphans || true
-                    docker rm -f pytest-service || true
-                    docker rm -f testupmonthdb || true
+                    echo "📋 Listing all running containers..."
+                    docker ps
+
+                    echo "📝 Tail logs from key services..."
+                    docker logs --tail=20 webapp || echo "webapp not found"
+                    docker logs --tail=20 pytest-service || echo "pytest-service not found"
+                    docker logs --tail=20 mongodb || echo "mongodb not found"
                 '''
             }
         }
 
-        stage('Verify Required Files') {
+        stage('Keep Alive') {
             steps {
                 script {
-                    sh """
-                        echo "--- Workspace Directory ---"
-                        ls -la
-                        [ -f "docker-compose.yml" ] || (echo "❌ Missing docker-compose.yml" && exit 1)
-                    """
+                    echo "🟢 All services are running. You can now SSH to the agent and run docker exec commands."
+                    echo "⏳ Sleeping for debug session..."
+                    sh 'sleep 600' // Keep alive 10 min (change if needed)
                 }
-            }
-        }
-
-        stage('Run Integration Tests') {
-            steps {
-                sh '''
-                    echo "Running integration tests with Docker Compose..."
-                    docker compose up --abort-on-container-exit --exit-code-from pytest-service pytest-service
-                '''
             }
         }
     }
 
     post {
         always {
-            sh '''
-                echo "Cleaning up Docker environment..."
-                docker compose down --remove-orphans || true
-            '''
-        }
-        success {
-            echo "🎉 All integration tests passed!"
-        }
-        failure {
-            echo "❌ Tests failed. Check logs above for details."
+            echo "🧼 Pipeline done. Use logs above to debug."
         }
     }
 }

@@ -123,7 +123,8 @@ services:
     env_file:
     - upmonth-tests/.env
     depends_on:
-      - webapp
+      webapp:
+        condition: service_healthy
     networks:
       - upmonth-dev-tests
     command: tail -f /dev/null
@@ -151,6 +152,11 @@ services:
       - upmonth-database
     networks:
       - upmonth-dev-tests
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   
   
   upmonth-analytics:
