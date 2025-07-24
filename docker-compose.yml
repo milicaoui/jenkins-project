@@ -126,8 +126,7 @@ services:
       - webapp
     networks:
       - upmonth-dev-tests
-    mem_limit: 1g
-    mem_reservation: 512m
+    command: tail -f /dev/null
   
   search-service:
     image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-search:0.0.169
