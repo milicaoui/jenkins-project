@@ -22,9 +22,9 @@ services:
     networks:
       - upmonth-dev-tests
 
-  upmonth-database:
+  upmonthdatabase:
     image: mysql:5.7
-    container_name: upmonthdb
+    container_name: upmonthdatabase
     ports:
       - "3308:3306"
     environment: 
@@ -62,7 +62,7 @@ services:
     env_file:
       - ./upmonth-text-extraction/.env
     depends_on:
-      - upmonth-database
+      - upmonthdatabase
     networks:
       - upmonth-dev-tests
 
@@ -74,7 +74,7 @@ services:
     env_file:
       - ./upmonth-query-dsl/.env
     depends_on:
-      - upmonth-database
+      - upmonthdatabase
       - memcached-dsl
     networks:
       - upmonth-dev-tests
@@ -98,7 +98,7 @@ services:
   db-init:
     image: mysql:5.7
     depends_on:
-      upmonth-database:
+      upmonthdatabase:
         condition: service_healthy
     networks:
       - upmonth-dev-tests
@@ -137,7 +137,7 @@ services:
     ports:
       - "8091:80"
     depends_on:
-      - upmonth-database
+      - upmonthdatabase
     networks:
       - upmonth-dev-tests
   
@@ -149,7 +149,7 @@ services:
     ports:
       - "8089:80"
     depends_on:
-      - upmonth-database
+      - upmonthdatabase
     networks:
       - upmonth-dev-tests
     command: ["java", "-jar", "/upmonth/upmonth-webapp.jar"]
