@@ -152,11 +152,13 @@ services:
       - upmonth-database
     networks:
       - upmonth-dev-tests
+    command: ["java", "-jar", "/upmonth/upmonth-webapp.jar"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/public/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+
   
   
   upmonth-analytics:
