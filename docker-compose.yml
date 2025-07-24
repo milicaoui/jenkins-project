@@ -87,9 +87,9 @@ services:
     networks:
       - upmonth-dev-tests
   
-  memcached:
+  memcached-webapp:
     image: launcher.gcr.io/google/memcached1
-    container_name: memcached
+    container_name: memcached-webapp
     ports:
       - "11213:11211"
     networks:
@@ -111,23 +111,30 @@ services:
       - -c
       - |
         for file in /docker-entrypoint-initdb.d/*.sql; do
-          echo "Running $file"
-          mysql -h upmonthdb -uroot -p"$MYSQL_ROOT_PASSWORD" < "$file"
+          echo "Running $$file"
+          if [ -f "$$file" ]; then
+            mysql -h upmonthdb -uroot -p"$$MYSQL_ROOT_PASSWORD" < "$$file"
+          else
+            echo "File $$file not found or not readable"
+          fi
         done
 
-  pytest-service:
-    build:
-      context: ./upm-tests
-      dockerfile: Dockerfile
-    container_name: pytest-service
-    env_file:
-    - upmonth-tests/.env
-    depends_on:
-      webapp:
-        condition: service_healthy
-    networks:
-      - upmonth-dev-tests
-    command: tail -f /dev/null
+
+
+
+  # pytest-service:
+  #   build:
+  #     context: ./upm-tests
+  #     dockerfile: Dockerfile
+  #   container_name: pytest-service
+  #   env_file:
+  #   - upmonth-tests/.env
+  #   depends_on:
+  #     webapp:
+  #       condition: service_healthy
+  #   networks:
+  #     - upmonth-dev-tests
+  #   command: tail -f /dev/null
   
   search-service:
     image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-search:0.0.169
@@ -137,13 +144,26 @@ services:
     ports:
       - "8091:80"
     depends_on:
-      - upmonthdatabase
+      upmonthdatabase:
+        condition: service_healthy
+      upmonth-elasticsearch:
+        condition: service_healthy
     networks:
       - upmonth-dev-tests
+
   
   webapp:
-    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-webapp:0.53.11
+    image: 175663446849.dkr.ecr.us-east-1.amazonaws.com/upmonth-webapp:0.53.9
     container_name: webapp
+    environment:
+    - UPMONTH_JDBC_DRIVER_CLASS_NAME=com.mysql.jdbc.Driver
+    - UPMONTH_JDBC_PASSWORD=upmonth
+    - UPMONTH_JDBC_URL=jdbc:mysql://upmonthdatabase:3306/upmonthdb?serverTimezone=UTC&useSSL=false
+    - UPMONTH_JDBC_USERNAME=root
+    - UPMONTH_JPA_GENERATE_DDL=true
+    - UPMONTH_HIBERNATE_DIALECT=org.hibernate.dialect.MySQL5InnoDBDialect
+    - UPMONTH_HIBERNATE_HBM2DLL_AUTO=update
+    - UPMONTH_HIBERNATE_SHOW_SQL=false
     env_file:
       - ./upmonth-webapp/.env
     ports:
@@ -168,6 +188,11 @@ services:
       - mongodb
     ports:
       - "9966:9966"
+    environment:
+    - ANALYTICS_HOSTING=LOCAL
+    - ANALYTICS_ENVIRONMENT=TEST
+    - SPRING_DATA_MONGODB_HOST=mongodb
+    - SPRING_DATA_MONGODB_PORT=27017
     networks:
       - upmonth-dev-tests
   
@@ -192,3 +217,10 @@ services:
       upmonth-dev-tests:
         aliases:
           - elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
